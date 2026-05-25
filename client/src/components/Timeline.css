@@ -1,0 +1,47 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.timeline-item h3 {
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.timeline-period {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.timeline-org {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.timeline-note {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.timeline-item ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text);
+}
+
+.timeline-item li {
+  margin-bottom: 0.35rem;
+  font-size: 0.9375rem;
+}

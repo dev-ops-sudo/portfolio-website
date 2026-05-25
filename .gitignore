@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+server/data/inbox.json
+*.log
+.DS_Store
