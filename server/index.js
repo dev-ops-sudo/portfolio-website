@@ -34,21 +34,19 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
 ].filter(Boolean);
 
+app.use(express.json({ limit: "32kb" }));
+
 app.use(
+  "/api",
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin) || !serveFrontend) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
     },
-  })
-);
-app.use(express.json({ limit: "32kb" }));
-
-app.use(
-  "/api",
+  }),
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
@@ -175,6 +173,7 @@ if (serveFrontend) {
   app.use(express.static(clientDist));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
+    if (path.extname(req.path)) return res.status(404).end();
     res.sendFile(indexHtml, (err) => {
       if (err) next(err);
     });
