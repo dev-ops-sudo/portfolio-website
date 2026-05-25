@@ -4,7 +4,8 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import nodemailer from "nodemailer";
 import { z } from "zod";
-import fs from "fs/promises";
+import fs from "fs";
+import fsp from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -23,8 +24,9 @@ const contactSchema = z.object({
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const isProduction = process.env.NODE_ENV === "production";
 const clientDist = path.join(__dirname, "../client/dist");
+const indexHtml = path.join(clientDist, "index.html");
+const serveFrontend = fs.existsSync(indexHtml);
 
 const allowedOrigins = [
   process.env.CLIENT_URL,
@@ -35,7 +37,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin) || !isProduction) {
+      if (!origin || allowedOrigins.includes(origin) || !serveFrontend) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -56,20 +58,20 @@ app.use(
 
 async function ensureInboxFile() {
   const dir = path.dirname(INBOX_FILE);
-  await fs.mkdir(dir, { recursive: true });
+  await fsp.mkdir(dir, { recursive: true });
   try {
-    await fs.access(INBOX_FILE);
+    await fsp.access(INBOX_FILE);
   } catch {
-    await fs.writeFile(INBOX_FILE, "[]", "utf-8");
+    await fsp.writeFile(INBOX_FILE, "[]", "utf-8");
   }
 }
 
 async function saveToInbox(entry) {
   await ensureInboxFile();
-  const raw = await fs.readFile(INBOX_FILE, "utf-8");
+  const raw = await fsp.readFile(INBOX_FILE, "utf-8");
   const inbox = JSON.parse(raw);
   inbox.push({ ...entry, receivedAt: new Date().toISOString() });
-  await fs.writeFile(INBOX_FILE, JSON.stringify(inbox, null, 2), "utf-8");
+  await fsp.writeFile(INBOX_FILE, JSON.stringify(inbox, null, 2), "utf-8");
 }
 
 function createTransporter() {
@@ -169,20 +171,28 @@ app.post("/api/contact", async (req, res) => {
   });
 });
 
-if (isProduction) {
+if (serveFrontend) {
   app.use(express.static(clientDist));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
-    res.sendFile(path.join(clientDist, "index.html"), (err) => {
+    res.sendFile(indexHtml, (err) => {
       if (err) next(err);
     });
+  });
+} else {
+  app.get("/", (_req, res) => {
+    res
+      .status(503)
+      .send(
+        "Frontend build not found. On Render, set Build Command to: npm run install:all && npm run build"
+      );
   });
 }
 
 app.listen(PORT, () => {
   console.log(
-    isProduction
-      ? `Portfolio live on port ${PORT}`
-      : `Server running on http://localhost:${PORT}`
+    serveFrontend
+      ? `Portfolio live on port ${PORT} (serving ${clientDist})`
+      : `API running on port ${PORT} — frontend build missing at ${clientDist}`
   );
 });
